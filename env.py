@@ -13,20 +13,23 @@ from ...snake import Snake
 
 
 class SnakeEnv(Env):
-    metadata = {'render_modes': ['ansii']}
+    metadata = {'render_modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, render_mode=None):
         self.size = (16, 16)
 
         self.observation_space = spaces.Dict(
             {
-                'grid': spaces.Box(low=0, high=1, shape=self.size, dtype=np.float32)
+                'grid': spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32)
             }
         )
 
         self.action_space = spaces.Discrete(4)
 
         self.game = None
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
     def step(self, action: ActType):
         self.game.agents[0].next_move = MOVES[action]
@@ -56,13 +59,24 @@ class SnakeEnv(Env):
 
         return self._get_obs(), self._get_info()
 
+    def render(self):
+        printer = Printer()
+        printer.print(self.game)
+
     def _get_obs(self):
-        player = (s for s in self.game.snakes if s.id == 0)
 
         grid = np.zeros(self.game.grid_size, dtype=np.float32)
+
+        for candy in self.game.candies:
+            grid[candy[0], candy[1]] = 1
+
         for snake in self.game.snakes:
             for segment in snake:
-                grid[segment] = 1
+                grid[segment[0], segment[1]] = -2
+
+        player = next((s for s in self.game.snakes if s.id == 0), None)
+        if player:
+            grid[player[0][0], player[0][1]] = -1
 
         return {'grid': grid}
 
@@ -85,6 +99,44 @@ class MockAgent(Bot):
 
     def determine_next_move(self, snake: Snake, other_snakes: List[Snake], candies: List[np.array]) -> Move:
         return self.next_move
+
+
+numbers = ['⓪']
+
+
+def fill_numbers():
+    one = '①'.encode()
+    for i in range(20):
+        ba = bytearray(one)
+        ba[2] += i
+        numbers.append(bytes(ba).decode())
+
+
+fill_numbers()
+
+
+def number_to_circled(number: int) -> str:
+    return numbers[number % len(numbers)]
+
+
+class Printer:
+    def print(self, game):
+        grid = np.empty(game.grid_size, dtype=str)
+        grid.fill(' ')
+        for candy in game.candies:
+            grid[candy[0], candy[1]] = '*'
+        for snake in game.snakes:
+            print(f'name={game.agents[snake.id].name!r} {snake}')
+            for pos in snake:
+                grid[pos[0], pos[1]] = number_to_circled(snake.id)
+
+        print(f' {"▁" * 2 * game.grid_size[0]}▁ ')
+        for j in reversed(range(grid.shape[1])):
+            print('▕', end='')
+            for i in range(grid.shape[0]):
+                print(f' {grid[i, j]}', end='')
+            print(' ▏')
+        print(f' {"▔" * 2 * game.grid_size[0]}▔ ')
 
 
 register(
