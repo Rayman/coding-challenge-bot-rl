@@ -7,8 +7,8 @@ from gymnasium.core import ActType, Env
 from gymnasium.envs.registration import register
 
 from ...bot import Bot
-from ...bots.random import Random
-from ...constants import Move, MOVES
+from ...bots.random import Random, is_on_grid, collides
+from ...constants import Move, MOVES, MOVE_VALUE_TO_DIRECTION
 from ...game import Game
 from ...snake import Snake
 
@@ -74,6 +74,13 @@ class SnakeEnv(Env):
     def render(self):
         printer = Printer()
         printer.print(self.game)
+
+    def action_masks(self) -> np.ndarray:
+        player = next(s for s in self.game.snakes if s.id == 0)
+
+        return np.array([is_on_grid(player[0] + direction, self.game.grid_size)
+                         and not collides(player[0] + direction, self.game.snakes)
+                         for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
 
     def _get_obs(self):
 
