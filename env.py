@@ -1,3 +1,4 @@
+import random
 from typing import List, Tuple
 
 import numpy as np
@@ -32,15 +33,23 @@ class SnakeEnv(Env):
         self.render_mode = render_mode
 
     def step(self, action: ActType):
+        player = next(s for s in self.game.snakes if s.id == 0)
+        length_before_update = len(player)
+
         self.game.agents[0].next_move = MOVES[action]
         self.game.update()
 
         if self.game.finished():
-            reward = self.game.scores[0]
+            if self.game.scores[0] >= self.game.scores[1]:
+                reward = 10
+            else:
+                reward = -10
+            # print('final reward:', reward)
         else:
-            player = next(s for s in self.game.snakes if s.id == 0)
-            opponent = next(s for s in self.game.snakes if s.id == 1)
-            reward = len(player)
+            # player = next(s for s in self.game.snakes if s.id == 0)
+            # opponent = next(s for s in self.game.snakes if s.id == 1)
+            reward = len(player) - length_before_update
+            # print('reward:', reward)
 
         observation = self._get_obs()
         terminated = self.game.finished()
@@ -50,6 +59,8 @@ class SnakeEnv(Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
+        if seed is not None:
+            random.seed(seed)
 
         agents = {
             0: MockAgent,
