@@ -37,7 +37,8 @@ class SnakeEnv(Env):
         length_before_update = len(player)
 
         self.game.agents[0].next_move = MOVES[action]
-        self.game.update()
+        self.game.update()  # Let our bot play
+        self.game.update()  # Let the opponent play
 
         if self.game.finished():
             if self.game.scores[0] >= self.game.scores[1]:
