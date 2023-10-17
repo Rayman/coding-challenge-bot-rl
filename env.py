@@ -8,6 +8,7 @@ from ...bots.random import Random, is_on_grid, collides
 from ...constants import Move, MOVES, MOVE_VALUE_TO_DIRECTION
 from ...game import Game
 from ...snake import Snake
+from icecream import ic
 
 
 class SnakeEnv(gym.Env):
@@ -16,9 +17,17 @@ class SnakeEnv(gym.Env):
         self.render = render
         
         self.size = (16, 16)
-        self.observation_space = gym.spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32) # TODO: check notes on normalization in [0,1]
         self.action_space = gym.spaces.Discrete(4)
         self.game = None
+    
+    def reset(self):
+        self.agents = {
+            0: MockAgent,
+            1: Random,
+        }
+        self.game = Game(agents=self.agents)
+        return self.get_obs()
 
     def step(self, action):
         player = next(s for s in self.game.snakes if s.id == 0)
@@ -45,14 +54,6 @@ class SnakeEnv(gym.Env):
         info = self.get_info()
 
         return observation, reward, done, info
-
-    def reset(self):
-        agents = {
-            0: MockAgent,
-            1: Random,
-        }
-        self.game = Game(agents=agents)
-        return self.get_obs()
 
     def render(self):
         if self.render:
