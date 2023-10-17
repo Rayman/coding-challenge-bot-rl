@@ -1,10 +1,7 @@
-import random
 from typing import List, Tuple
 
 import numpy as np
-from gymnasium import spaces
-from gymnasium.core import ActType, Env
-from gymnasium.envs.registration import register
+import gym
 
 from ...bot import Bot
 from ...bots.random import Random, is_on_grid, collides
@@ -13,26 +10,17 @@ from ...game import Game
 from ...snake import Snake
 
 
-class SnakeEnv(Env):
-    metadata = {'render_modes': ['human']}
-
-    def __init__(self, render_mode=None):
+class SnakeEnv(gym.Env):
+    def __init__(self, render=False):
+        self.printer = Printer()
+        self.render = render
+        
         self.size = (16, 16)
-
-        self.observation_space = spaces.Dict(
-            {
-                'grid': spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32)
-            }
-        )
-
-        self.action_space = spaces.Discrete(4)
-
+        self.observation_space = gym.spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32)
+        self.action_space = gym.spaces.Discrete(4)
         self.game = None
 
-        assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.render_mode = render_mode
-
-    def step(self, action: ActType):
+    def step(self, action):
         player = next(s for s in self.game.snakes if s.id == 0)
         length_before_update = len(player)
 
@@ -52,28 +40,26 @@ class SnakeEnv(Env):
             reward = len(player) - length_before_update
             # print('reward:', reward)
 
-        observation = self._get_obs()
-        terminated = self.game.finished()
-        info = self._get_info()
+        observation = self.get_obs()
+        done = self.game.finished()
+        info = self.get_info()
 
-        return observation, reward, terminated, False, info
+        return observation, reward, done, info
 
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
-        if seed is not None:
-            random.seed(seed)
-
+    def reset(self):
         agents = {
             0: MockAgent,
             1: Random,
         }
         self.game = Game(agents=agents)
-
-        return self._get_obs(), self._get_info()
+        return self.get_obs()
 
     def render(self):
-        printer = Printer()
-        printer.print(self.game)
+        if self.render:
+            self.printer.print(self.game)
+    
+    def get_info(self):
+        return {}
 
     def action_masks(self) -> np.ndarray:
         player = next(s for s in self.game.snakes if s.id == 0)
@@ -82,8 +68,8 @@ class SnakeEnv(Env):
                          and not collides(player[0] + direction, self.game.snakes)
                          for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
 
-    def _get_obs(self):
-
+    def get_obs(self):
+        
         grid = np.zeros(self.game.grid_size, dtype=np.float32)
 
         for candy in self.game.candies:
@@ -97,10 +83,7 @@ class SnakeEnv(Env):
         if player:
             grid[player[0][0], player[0][1]] = -1
 
-        return {'grid': grid}
-
-    def _get_info(self):
-        return {}
+        return grid
 
 
 class MockAgent(Bot):
@@ -156,9 +139,3 @@ class Printer:
                 print(f' {grid[i, j]}', end='')
             print(' ▏')
         print(f' {"▔" * 2 * game.grid_size[0]}▔ ')
-
-
-register(
-    id="snakes",
-    entry_point="snakes.bots.brammmieee.env:SnakeEnv",
-)
