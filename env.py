@@ -2,14 +2,12 @@ from typing import List, Tuple
 
 import numpy as np
 import gym
-# import gymnasium as gym
 
 from ...bot import Bot
 from ...bots.random import Random, is_on_grid, collides
 from ...constants import Move, MOVES, MOVE_VALUE_TO_DIRECTION
 from ...game import Game
 from ...snake import Snake
-from icecream import ic
 
 
 class SnakeEnv(gym.Env):
