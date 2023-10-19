@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 import numpy as np
 import gym
+# import gymnasium as gym
 
 from ...bot import Bot
 from ...bots.random import Random, is_on_grid, collides
@@ -15,7 +16,7 @@ class SnakeEnv(gym.Env):
     def __init__(self, render=False):
         self.printer = Printer()
         self.render = render
-        
+
         self.size = (16, 16)
         self.observation_space = gym.spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32) # TODO: check notes on normalization in [0,1]
         self.action_space = gym.spaces.Discrete(4)
@@ -58,7 +59,7 @@ class SnakeEnv(gym.Env):
     def render(self):
         if self.render:
             self.printer.print(self.game)
-    
+
     def get_info(self):
         return {}
 
@@ -70,21 +71,26 @@ class SnakeEnv(gym.Env):
                          for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
 
     def get_obs(self):
-        
-        grid = np.zeros(self.game.grid_size, dtype=np.float32)
-
-        for candy in self.game.candies:
-            grid[candy[0], candy[1]] = 1
-
-        for snake in self.game.snakes:
-            for segment in snake:
-                grid[segment[0], segment[1]] = -2
-
         player = next((s for s in self.game.snakes if s.id == 0), None)
-        if player:
-            grid[player[0][0], player[0][1]] = -1
+        opponent = next((s for s in self.game.snakes if s.id == 0), None)
+        return get_obs(self.game.grid_size, player, opponent, self.game.candies)
 
-        return grid
+
+def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
+    grid = np.zeros(grid_size, dtype=np.float32)
+
+    for candy in candies:
+        grid[candy[0], candy[1]] = 1
+
+    if player:
+        for segment in player:
+            grid[segment[0], segment[1]] = -2
+        grid[player[0][0], player[0][1]] = -1
+    if opponent:
+        for segment in opponent:
+            grid[segment[0], segment[1]] = -2
+
+    return grid
 
 
 class MockAgent(Bot):
