@@ -2,6 +2,7 @@
 from snakes.bots.brammmieee.env import SnakeEnv
 from stable_baselines3.ppo import PPO
 from stable_baselines3.ppo.policies import MlpPolicy
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback, CallbackList, StopTrainingOnNoModelImprovement
@@ -14,10 +15,15 @@ from sb3_contrib.common.maskable.utils import get_action_masks
 # %% 
 env = SnakeEnv()
 check_env(env)
+env = Monitor(
+    env=env, 
+    filename=None,
+    info_keywords=(),  # can be used for logging the parameters for each test run for instance
+)
 
 # ====================================== # Training # ==================================== #
 # %% Model #NOTE: alternatively run the "Loading non-archived model section!"
-model_name = "2_action_masked"
+model_name = "action_masked_monitor_wrap"
 model = MaskablePPO(
     policy="MlpPolicy",
     env=env,
@@ -37,7 +43,7 @@ eval_callback = EvalCallback(
     eval_env = env,
     callback_on_new_best = None,
     callback_after_eval = None,
-    n_eval_episodes = 10,
+    n_eval_episodes = 20,
     eval_freq = 10000,
     log_path = None,
     best_model_save_path = "./models",
@@ -53,7 +59,7 @@ callback_list = CallbackList([ #NOTE: can also pass list directly to learn
 
 # %% Train model
 model.learn(
-    total_timesteps=2e6,
+    total_timesteps=2e5,
     callback=callback_list,
     log_interval=10, 
     tb_log_name=model_name, 
