@@ -38,15 +38,13 @@ class SnakeEnv(gym.Env):
 
         if self.game.finished():
             if self.game.scores[0] >= self.game.scores[1]:
-                reward = 10
+                reward = 100
             else:
-                reward = -10
-            # print('final reward:', reward)
+                reward = -100
+        elif len(player) - length_before_update > 0:
+            reward = 10*(len(player) - length_before_update)
         else:
-            # player = next(s for s in self.game.snakes if s.id == 0)
-            # opponent = next(s for s in self.game.snakes if s.id == 1)
-            reward = len(player) - length_before_update
-            # print('reward:', reward)
+            reward = -1
 
         observation = self.get_obs()
         done = self.game.finished()
