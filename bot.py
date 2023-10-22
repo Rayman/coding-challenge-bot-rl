@@ -17,7 +17,7 @@ class RLQuaza(Bot):
     def __init__(self, id: int, grid_size: Tuple[int, int]):
         self.id = id
         self.grid_size = grid_size
-        self.model = MaskablePPO.load(os.path.join(os.path.dirname(__file__), 'models/1_action_masked_1000000_steps'))
+        self.model = MaskablePPO.load("/home/bramo/coding-challenge-snakes/models/3_random_bot__1000_turns/3_random_bot__1000_turns_740000_steps")
 
     @property
     def name(self):

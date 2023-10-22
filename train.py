@@ -1,4 +1,6 @@
-# %% Modules
+#!/usr/bin/python3
+# %%
+import tensorrt
 from snakes.bots.brammmieee.env import SnakeEnv
 from stable_baselines3.ppo import PPO
 from stable_baselines3.ppo.policies import MlpPolicy
@@ -12,9 +14,9 @@ from sb3_contrib.common.maskable.evaluation import evaluate_policy
 from sb3_contrib.common.maskable.utils import get_action_masks
 
 # ============================== # Creating the environment # ============================ #
-# %% 
+# %%
 env = SnakeEnv()
-check_env(env)
+# check_env(env)
 env = Monitor(
     env=env, 
     filename=None,
@@ -22,15 +24,15 @@ env = Monitor(
 )
 
 # ====================================== # Training # ==================================== #
-# %% Model #NOTE: alternatively run the "Loading non-archived model section!"
-model_name = "action_masked_monitor_wrap"
+# %% Model
+model_name = "3_random_bot__1000_turns"
 model = MaskablePPO(
     policy="MlpPolicy",
     env=env,
     tensorboard_log = "./logs/" + model_name,
 )
 
-# %% Callbacks
+# Callbacks
 checkpoint_callback = CheckpointCallback(
     save_freq = 10000,
     save_path = "./models/" + model_name,
@@ -59,7 +61,7 @@ callback_list = CallbackList([ #NOTE: can also pass list directly to learn
 
 # %% Train model
 model.learn(
-    total_timesteps=2e5,
+    total_timesteps=2e6,
     callback=callback_list,
     log_interval=10, 
     tb_log_name=model_name, 
@@ -107,9 +109,10 @@ print(f'mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}')
 from snakes.bots.brammmieee.env import SnakeEnv
 import numpy as np
 from icecream import ic
+import tensorrt
 
 # %%
-env = SnakeEnv()
+env = SnakeEnv(debug=False)
 
 # %%
 obs = env.reset() 
@@ -119,14 +122,10 @@ action = env.action_space.sample()
 obs, reward, done, info = env.step(action)
 
 # %% 
-import time
-
-# obs = env.reset()
-n_steps = 100000000
+n_steps = 1000
 for i in range(n_steps):
     action = env.action_space.sample()
-    obs, reward, done, info = env.step(action, teleop=True)
-    # time.sleep(0.4)
+    obs, reward, done, info = env.step(action)
     if done:
         obs = env.reset()
 # %%

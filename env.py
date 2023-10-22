@@ -8,49 +8,115 @@ from ...bots.random import Random, is_on_grid, collides
 from ...constants import Move, MOVES, MOVE_VALUE_TO_DIRECTION
 from ...game import Game
 from ...snake import Snake
+from copy import deepcopy
+import random
 
+from ..example.bot import ExampleBot
+from ..random import Random
+from ..hein.bot import ApologeticApophis
+from ..felipe.bot import TemplateSnake
+from ..mahmoud.bot import SneakyBot
+from ..jeroen.bot import ExampleBot as JeroenBot
+from ..jonothan.bot import bender
+from ..lewie.bot import LewieBot
+from ..bram.bot import Slytherin
+from ..daniel.bot import Explorer
+from ..rokusottervanger.bot import OtterByte
+from ..mukunda.bot import Snakunamatata
+from ..ferry.bot import FurryMuncher
+from ..mhoogesteger.bot import CherriesAreForLosers
 
 class SnakeEnv(gym.Env):
-    def __init__(self, render=False):
+    def __init__(self, render=False, debug=False):
+        bots = (
+            Random,
+            ExampleBot,
+            ApologeticApophis,
+            TemplateSnake,
+            SneakyBot,
+            JeroenBot,
+            bender,
+            LewieBot,
+            Slytherin,
+            Explorer,
+            OtterByte,
+            Snakunamatata,
+            FurryMuncher,
+            CherriesAreForLosers,
+        )
+        self.random_bot = bots[random.randint(0, len(bots))]
         self.printer = Printer()
         self.render = render
+        self.debug = debug
 
         self.size = (16, 16)
-        self.observation_space = gym.spaces.Box(low=-2, high=1, shape=self.size, dtype=np.float32) # TODO: check notes on normalization in [0,1]
+        self.observation_space = gym.spaces.Box(low=-4, high=1, shape=self.size, dtype=np.float32) # TODO: check notes on normalization in [0,1]
         self.action_space = gym.spaces.Discrete(4)
         self.game = None
     
     def reset(self):
         self.agents = {
             0: MockAgent,
-            1: Random,
+            1: self.random_bot,
         }
-        self.game = Game(agents=self.agents)
-        return self.get_obs()
+        self.game = Game(agents=self.agents, print_stats=self.debug)
+        self.player = next((s for s in self.game.snakes if s.id == 0), None)
+        self.opponent = next((s for s in self.game.snakes if s.id == 1), None)
+        
+        observation = self.get_obs(self.player, self.opponent)
+        return observation
 
     def step(self, action):
-        player = next(s for s in self.game.snakes if s.id == 0)
-        length_before_update = len(player)
-
         self.game.agents[0].next_move = MOVES[action]
+        player_prev = deepcopy(self.player)
+        opponent_prev = deepcopy(self.opponent)
+
+        # update the game
         self.game.update()  # Let our bot play
+        self.player = next((s for s in self.game.snakes if s.id == 0), None) # update bot pos
         self.game.update()  # Let the opponent play
+        self.opponent = next((s for s in self.game.snakes if s.id == 1), None) # update opponent pos
+        
+        # When snake becomes None or is outside the bounds set to prev position for last state
+        if not self.player:
+            self.player = player_prev
+        if not self.opponent:
+            self.opponent = opponent_prev  
+
+        # Get return values
+        reward = self.get_reward(self.player)
+        observation = self.get_obs(self.player, self.opponent)
+        done = self.game.finished()
+        info = self.get_info()
+
+        return observation, reward, done, info
+    
+    def get_reward(self, player: Snake):
+        snake_head = np.array([player[0][0], player[0][1]])
+        candies = self.game.candies
 
         if self.game.finished():
             if self.game.scores[0] >= self.game.scores[1]:
                 reward = 100
             else:
                 reward = -100
-        elif len(player) - length_before_update > 0:
-            reward = 10*(len(player) - length_before_update)
+        elif any(np.array_equal(snake_head, candy) for candy in candies):
+            reward = 10
         else:
-            reward = -1
+            # candy_dists = [np.linalg.norm(snake_head - candy) for candy in candies]
+            # closest_candy_dist = min(candy_dists)
+            reward = 0
+        
+        return reward
 
-        observation = self.get_obs()
-        done = self.game.finished()
-        info = self.get_info()
+    def action_masks(self) -> np.ndarray:
+        player = next(s for s in self.game.snakes if s.id == 0)
+        return np.array([is_on_grid(player[0] + direction, self.game.grid_size)
+                         and not collides(player[0] + direction, self.game.snakes)
+                         for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
 
-        return observation, reward, done, info
+    def get_obs(self, player: Snake, opponent: Snake):
+        return get_obs(self.game.grid_size, player, opponent, self.game.candies)
 
     def render(self):
         if self.render:
@@ -58,19 +124,6 @@ class SnakeEnv(gym.Env):
 
     def get_info(self):
         return {}
-
-    def action_masks(self) -> np.ndarray:
-        player = next(s for s in self.game.snakes if s.id == 0)
-
-        return np.array([is_on_grid(player[0] + direction, self.game.grid_size)
-                         and not collides(player[0] + direction, self.game.snakes)
-                         for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
-
-    def get_obs(self):
-        player = next((s for s in self.game.snakes if s.id == 0), None)
-        opponent = next((s for s in self.game.snakes if s.id == 0), None)
-        return get_obs(self.game.grid_size, player, opponent, self.game.candies)
-
 
 def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
     grid = np.zeros(grid_size, dtype=np.float32)
@@ -82,9 +135,11 @@ def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
         for segment in player:
             grid[segment[0], segment[1]] = -2
         grid[player[0][0], player[0][1]] = -1
+
     if opponent:
         for segment in opponent:
-            grid[segment[0], segment[1]] = -2
+            grid[segment[0], segment[1]] = -4
+        grid[opponent[0][0], opponent[0][1]] = -3
 
     return grid
 
