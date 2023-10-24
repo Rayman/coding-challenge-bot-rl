@@ -1,11 +1,12 @@
 ### First time setup
-- Add the path to the snakes module of the coding-challenge-snakes to your pythonpath
-to prevent importing errors
+- Put the train.py in the coding challenge's top level folder in order to run it
 
 ### To do
 - bug fixes
-    - [DONE] monitoring reward (check monitoring wrapper)
-    - [DONE] freezing progress (decrease the max round count)
+    - monitoring reward (check monitoring wrapper)
+    - freezing progress (decrease the max round count)
+    - other snake body not masked
+    - action masking still allows turning in place (see debugging)
 
 - implement action masking
     - [DONE] check inference on masked model
@@ -19,4 +20,9 @@ to prevent importing errors
     - a-star progress reward (make progress on optimal path to candy considering obstacles)
     - minimize the maximum risk -> minimax 
 
-- enable randomly sampling a bot during training
+- [DONE] enable randomly sampling a bot during training
+
+- try to limit the state space
+    - checkout png compression technique for lossless compression
+    - checkout the local state representation (con: information loss)
+

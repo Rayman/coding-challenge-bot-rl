@@ -16,7 +16,7 @@ from sb3_contrib.common.maskable.utils import get_action_masks
 # ============================== # Creating the environment # ============================ #
 # %%
 env = SnakeEnv()
-# check_env(env)
+check_env(env)
 env = Monitor(
     env=env, 
     filename=None,
@@ -25,7 +25,7 @@ env = Monitor(
 
 # ====================================== # Training # ==================================== #
 # %% Model
-model_name = "3_random_bot__1000_turns"
+model_name = "5_rinus_bot__1000_turns__prog_reward"
 model = MaskablePPO(
     policy="MlpPolicy",
     env=env,
@@ -45,7 +45,7 @@ eval_callback = EvalCallback(
     eval_env = env,
     callback_on_new_best = None,
     callback_after_eval = None,
-    n_eval_episodes = 20,
+    n_eval_episodes = 15,
     eval_freq = 10000,
     log_path = None,
     best_model_save_path = "./models",
@@ -108,8 +108,25 @@ print(f'mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}')
 # %% 
 from snakes.bots.brammmieee.env import SnakeEnv
 import numpy as np
-from icecream import ic
 import tensorrt
+from icecream import ic
+import matplotlib.pyplot as plt
+
+def print_info(info):
+    fig, ax = plt.subplots()
+    cax = ax.imshow(info['observation'], cmap='coolwarm', interpolation='nearest')
+    fig.colorbar(cax)
+
+    content = f"reward {info['reward']:2f}\n"
+    content += f"r finish {info['finish_reward']:.2f}\n"
+    content += f"r candy {info['candy_reward']:.2f}\n"
+    content += f"r progr. {info['progress_reward']:.2f}\n"
+    content += f"done {info['done']}\n"
+    content += f"action"
+
+    plt.text(1.5, 0.5, content, transform=plt.gca().transAxes,
+        horizontalalignment='center', fontsize=12, bbox=dict(facecolor='white', edgecolor='black'))
+    plt.show()
 
 # %%
 env = SnakeEnv(debug=False)
@@ -120,6 +137,9 @@ obs = env.reset()
 # %%
 action = env.action_space.sample()
 obs, reward, done, info = env.step(action)
+print_info(info)
+if done:
+    obs = env.reset()
 
 # %% 
 n_steps = 1000

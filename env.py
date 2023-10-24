@@ -35,7 +35,7 @@ class SnakeEnv(gym.Env):
             TemplateSnake,
             SneakyBot,
             JeroenBot,
-            bender,
+            # bender,
             LewieBot,
             Slytherin,
             Explorer,
@@ -44,7 +44,8 @@ class SnakeEnv(gym.Env):
             FurryMuncher,
             CherriesAreForLosers,
         )
-        self.random_bot = bots[random.randint(0, len(bots))]
+        self.first_loop = True
+        self.random_bot = bots[random.randint(0, len(bots)-1)]
         self.printer = Printer()
         self.render = render
         self.debug = debug
@@ -53,11 +54,13 @@ class SnakeEnv(gym.Env):
         self.observation_space = gym.spaces.Box(low=-4, high=1, shape=self.size, dtype=np.float32) # TODO: check notes on normalization in [0,1]
         self.action_space = gym.spaces.Discrete(4)
         self.game = None
+        self.info = {}
     
     def reset(self):
         self.agents = {
             0: MockAgent,
-            1: self.random_bot,
+            # 1: self.random_bot,
+            1: Random,
         }
         self.game = Game(agents=self.agents, print_stats=self.debug)
         self.player = next((s for s in self.game.snakes if s.id == 0), None)
@@ -87,6 +90,9 @@ class SnakeEnv(gym.Env):
         reward = self.get_reward(self.player)
         observation = self.get_obs(self.player, self.opponent)
         done = self.game.finished()
+
+        self.info.update({"done": done})
+        self.info.update({"action": self.game.agents[0].next_move})
         info = self.get_info()
 
         return observation, reward, done, info
@@ -95,19 +101,43 @@ class SnakeEnv(gym.Env):
         snake_head = np.array([player[0][0], player[0][1]])
         candies = self.game.candies
 
+        if not self.first_loop:
+            closest_candy_dist_prev = self.closest_candy_dist
+        candy_dists = [np.linalg.norm(snake_head - candy) for candy in candies]
+        self.closest_candy_dist = min(candy_dists)
+
+        # finish reward
         if self.game.finished():
             if self.game.scores[0] >= self.game.scores[1]:
-                reward = 100
+                finish_reward = 100
             else:
-                reward = -100
-        elif any(np.array_equal(snake_head, candy) for candy in candies):
-            reward = 10
+                finish_reward = -100
         else:
-            # candy_dists = [np.linalg.norm(snake_head - candy) for candy in candies]
-            # closest_candy_dist = min(candy_dists)
-            reward = 0
+            finish_reward = 0
+
+        # candy reward
+        if any(np.array_equal(snake_head, candy) for candy in candies):
+            candy_reward = 10
+        else:
+            candy_reward = 0
         
-        return reward
+        # progress reward
+        if not self.first_loop:
+            progress_reward = 5*(closest_candy_dist_prev - self.closest_candy_dist)
+        else:
+            progress_reward = 0
+
+        # total reward
+        reward = finish_reward + candy_reward + progress_reward
+        self.info.update({
+            "finish_reward": finish_reward,
+            "candy_reward": candy_reward,
+            "progress_reward": progress_reward,
+            "reward": reward,
+        })
+        
+        self.first_loop = False
+        return reward        
 
     def action_masks(self) -> np.ndarray:
         player = next(s for s in self.game.snakes if s.id == 0)
@@ -116,14 +146,16 @@ class SnakeEnv(gym.Env):
                          for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
 
     def get_obs(self, player: Snake, opponent: Snake):
-        return get_obs(self.game.grid_size, player, opponent, self.game.candies)
+        observation = get_obs(self.game.grid_size, player, opponent, self.game.candies)
+        self.info.update({"observation": observation})
+        return observation
 
     def render(self):
         if self.render:
             self.printer.print(self.game)
 
     def get_info(self):
-        return {}
+        return self.info
 
 def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
     grid = np.zeros(grid_size, dtype=np.float32)
