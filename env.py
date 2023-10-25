@@ -129,11 +129,14 @@ class SnakeEnv(gym.Env):
 
         # total reward
         reward = finish_reward + candy_reward + progress_reward
+        reward_dict = {
+            "finish": finish_reward,
+            "cany": candy_reward,
+            "progress": progress_reward,
+            "total": reward,
+        }
         self.info.update({
-            "finish_reward": finish_reward,
-            "candy_reward": candy_reward,
-            "progress_reward": progress_reward,
-            "reward": reward,
+            "reward": reward_dict
         })
         
         self.first_loop = False
@@ -160,18 +163,26 @@ class SnakeEnv(gym.Env):
 def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
     grid = np.zeros(grid_size, dtype=np.float32)
 
+    # fill the grid (obstacles:1, candies:2)
+    for segment in player:
+        grid[segment[0], segment[1]] = 1
+    for segment in opponent:
+        grid[segment[0], segment[1]] = 1
     for candy in candies:
-        grid[candy[0], candy[1]] = 1
+        grid[candy[0], candy[1]] = 2
 
-    if player:
-        for segment in player:
-            grid[segment[0], segment[1]] = -2
-        grid[player[0][0], player[0][1]] = -1
+    # compute local observation around snake head
+    snake_head = np.array([player[0][0], player[0][1]])
+    if player[0][0] > player[1][0]:
+        snake_heading = "right" 
+    elif player[0][0] < player[1][0]:
+        snake_heading = "left"
+    elif player[1][0] > player[1][1]:
+        snake_heading = "up"
+    elif player[1][0] < player[1][1]:
+        snake_heading = "down"
 
-    if opponent:
-        for segment in opponent:
-            grid[segment[0], segment[1]] = -4
-        grid[opponent[0][0], opponent[0][1]] = -3
+    
 
     return grid
 

@@ -14,6 +14,9 @@
 - make state unique 
     - embed the snake shape into the state
 
+- reduce the action space
+    - compute locally valid actions (left, right, straight)
+
 - reward shaping
     - [DONE] penalize not getting candy
     - reward direct progress towards candy
