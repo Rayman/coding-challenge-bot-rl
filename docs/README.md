@@ -17,6 +17,7 @@ to prevent importing errors
     - [DONE] penalize not getting candy
     - reward direct progress towards candy
     - a-star progress reward (make progress on optimal path to candy considering obstacles)
-    - minimize the maximum risk -> minimax 
+    - minimize the maximum risk -> minimax
+    - reward based on length difference between bots -> goal is to grow twice as long
 
 - enable randomly sampling a bot during training
