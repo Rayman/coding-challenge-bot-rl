@@ -4,6 +4,7 @@ from typing import List, Tuple
 import numpy as np
 from stable_baselines3 import PPO
 from sb3_contrib import MaskablePPO
+import re
 
 from .env import SnakeEnv, get_obs
 from ...bots.random import Random, is_on_grid, collides
@@ -17,7 +18,9 @@ class RLQuaza(Bot):
     def __init__(self, id: int, grid_size: Tuple[int, int]):
         self.id = id
         self.grid_size = grid_size
-        self.model = MaskablePPO.load("/home/bramo/coding-challenge-snakes/models/5_rinus_bot__1000_turns__prog_reward/5_rinus_bot__1000_turns__prog_reward_840000_steps")
+        zip_name = "11__reward_standstill_and_lose_penalty_9000000_steps"
+        model_name = re.sub(r"_\d+_steps$", "", zip_name)
+        self.model = MaskablePPO.load(f"/home/bramo/coding-challenge-snakes/models/{model_name}/{zip_name}")
 
     @property
     def name(self):
@@ -29,7 +32,7 @@ class RLQuaza(Bot):
 
     def determine_next_move(self, snake: Snake, other_snakes: List[Snake], candies: List[np.array]) -> Move:
         opponent = other_snakes[0]
-        obs = get_obs(self.grid_size, snake, opponent, candies)
+        obs, _ = get_obs(self.grid_size, snake, opponent, candies)
         action, _ = self.model.predict(
             obs, 
             deterministic=True, 
