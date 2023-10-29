@@ -29,5 +29,6 @@
     - reward direct progress towards candy
         - enable tracking of one candy (now closest -> might cause issues)
     - a-star progress reward (make progress on optimal path to candy considering obstacles)
-    - minimize the maximum risk -> minimax 
+    - minimize the maximum risk -> minimax
+    - reward based on length difference between bots -> goal is to grow twice as long
 
