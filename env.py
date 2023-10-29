@@ -62,6 +62,7 @@ class SnakeEnv(gym.Env):
             0: MockAgent,
             1: self.random_bot,
         }
+        self.sensei = CherriesAreForLosers(id=10, grid_size=(16,16))
         self.game = Game(grid_size=self.size, agents=self.agents, print_stats=self.debug)
         self.player = next((s for s in self.game.snakes if s.id == 0), None)
         self.opponent = next((s for s in self.game.snakes if s.id == 1), None)
@@ -70,7 +71,9 @@ class SnakeEnv(gym.Env):
         return observation
 
     def step(self, action):
-        self.game.agents[0].next_move = MOVES[action]
+        action_move = MOVES[action]
+        self.game.agents[0].next_move = action_move
+
         player_prev = deepcopy(self.player)
         opponent_prev = deepcopy(self.opponent)
 
@@ -78,7 +81,7 @@ class SnakeEnv(gym.Env):
         self.game.update()  # Let our bot play
         self.player = next((s for s in self.game.snakes if s.id == 0), None) # update bot pos
         if self.player:
-            self.game.update()  # Let the opponent play
+            self.game.update()  # Let the opponent play if our bot doesn't die first (other bot needs our bot to update it's move)
         self.opponent = next((s for s in self.game.snakes if s.id == 1), None) # update opponent pos
         
         # When snake becomes None or is outside the bounds set to prev position for last state
@@ -88,7 +91,7 @@ class SnakeEnv(gym.Env):
             self.opponent = opponent_prev  
 
         # Get return values
-        reward = self.get_reward(self.player, self.opponent)
+        reward = self.get_reward(self.player, self.opponent, action_move)
         observation = self.get_obs(self.player, self.opponent)
         done = self.game.finished()
 
@@ -99,7 +102,52 @@ class SnakeEnv(gym.Env):
 
         return observation, reward, done, info
     
-    def get_reward(self, player: Snake, opponent: Snake):
+    def get_reward(self, player: Snake, opponent: Snake, action_move):
+        candies = self.game.candies
+
+        sensei_move = self.sensei.determine_next_move(
+            snake=player, 
+            other_snakes=[opponent], 
+            candies=candies,
+        )
+
+        # total reward
+        reward = 1 if action_move == sensei_move else -1
+
+        # print("Our move: ", action_move)
+        # print("Sensei's move: ", sensei_move)
+        # print("Reward = ", reward)
+
+        # update info
+        if self.save_info:
+            self.info.update({
+                "reward": {
+                    "total": reward,
+                    }
+            })
+        return reward        
+
+    def action_masks(self) -> np.ndarray:
+        player = next(s for s in self.game.snakes if s.id == 0)
+        return np.array([is_on_grid(player[0] + direction, self.game.grid_size)
+                         and not collides(player[0] + direction, self.game.snakes)
+                         for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
+
+    def get_obs(self, player: Snake, opponent: Snake):
+        observation, grid = get_obs(self.game.grid_size, player, opponent, self.game.candies)
+        if self.save_info:
+            self.info.update({"grid_observation": grid})
+            self.info.update({"observation": observation})
+        return observation
+
+    def render(self):
+        if self.render:
+            self.printer.print(self.game)
+
+    def get_info(self):
+        return self.info
+    
+    def get_reward_old(self, player: Snake, opponent: Snake):
         snake_head = np.array([player[0][0], player[0][1]])
         candies = self.game.candies
 
@@ -152,43 +200,6 @@ class SnakeEnv(gym.Env):
         self.first_loop = False
         return reward      
     
-    def get_reward_old(self, player: Snake, opponent: Snake):
-        
-
-        # total reward
-        reward = 
-
-        if reward < 0.0001:
-            reward -= 1
-
-        if self.save_info:
-            self.info.update({
-                "reward": {
-                    "total": reward,
-                    }
-            })
-        self.first_loop = False
-        return reward        
-
-    def action_masks(self) -> np.ndarray:
-        player = next(s for s in self.game.snakes if s.id == 0)
-        return np.array([is_on_grid(player[0] + direction, self.game.grid_size)
-                         and not collides(player[0] + direction, self.game.snakes)
-                         for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
-
-    def get_obs(self, player: Snake, opponent: Snake):
-        observation, grid = get_obs(self.game.grid_size, player, opponent, self.game.candies)
-        if self.save_info:
-            self.info.update({"grid_observation": grid})
-            self.info.update({"observation": observation})
-        return observation
-
-    def render(self):
-        if self.render:
-            self.printer.print(self.game)
-
-    def get_info(self):
-        return self.info
 
 def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
     grid = np.zeros(grid_size, dtype=np.float32)
