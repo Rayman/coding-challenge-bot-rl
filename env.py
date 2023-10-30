@@ -51,8 +51,9 @@ class SnakeEnv(gym.Env):
         self.save_info = save_info
         self.debug = debug
 
-        self.size = (16, 16)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(256,), dtype=np.float32)
+        grid_length = 16
+        self.size = (grid_length, grid_length)
+        self.observation_space = gym.spaces.MultiBinary((grid_length**2)*4)
         self.action_space = gym.spaces.Discrete(4)
         self.game = None
         self.info = {}
@@ -62,7 +63,7 @@ class SnakeEnv(gym.Env):
             0: MockAgent,
             1: self.random_bot,
         }
-        self.sensei = CherriesAreForLosers(id=10, grid_size=(16,16))
+        self.sensei = CherriesAreForLosers(id=10, grid_size=self.size)
         self.game = Game(grid_size=self.size, agents=self.agents, print_stats=self.debug)
         self.player = next((s for s in self.game.snakes if s.id == 0), None)
         self.opponent = next((s for s in self.game.snakes if s.id == 1), None)
@@ -134,9 +135,8 @@ class SnakeEnv(gym.Env):
                          for move, direction in MOVE_VALUE_TO_DIRECTION.items()], dtype=bool)
 
     def get_obs(self, player: Snake, opponent: Snake):
-        observation, grid = get_obs(self.game.grid_size, player, opponent, self.game.candies)
+        observation = get_obs(self.game.grid_size, player, opponent, self.game.candies)
         if self.save_info:
-            self.info.update({"grid_observation": grid})
             self.info.update({"observation": observation})
         return observation
 
@@ -146,80 +146,31 @@ class SnakeEnv(gym.Env):
 
     def get_info(self):
         return self.info
-    
-    def get_reward_old(self, player: Snake, opponent: Snake):
-        snake_head = np.array([player[0][0], player[0][1]])
-        candies = self.game.candies
-
-        # finish reward
-        if self.game.finished():
-            if self.game.scores[0] >= self.game.scores[1]:
-                finish_reward = 100
-            else:
-                finish_reward = -100 #NOTE!!!
-        else:
-            finish_reward = 0
-
-        # candy reward
-        if any(np.array_equal(snake_head, candy) for candy in candies):
-            candy_reward = 10
-        else:
-            candy_reward = 0
-        
-        # progress reward
-        if not self.first_loop:
-            closest_candy_dist_prev = self.closest_candy_dist
-     
-        candy_dists = [np.linalg.norm(snake_head - candy) for candy in candies]
-        self.closest_candy_dist = min(candy_dists)
-
-        if not self.first_loop:
-            progress_reward = max(0, 5*(closest_candy_dist_prev - self.closest_candy_dist))
-        else:
-            progress_reward = 0
-
-        # longer reward
-        # longer_reward = len(player) - len(opponent)
-
-        # total reward
-        reward = finish_reward + candy_reward + progress_reward
-
-        if reward < 0.0001:
-            reward -= 1
-
-        if self.save_info:
-            self.info.update({
-                "reward": {
-                    "finish": finish_reward,
-                    "candy": candy_reward,
-                    "progress": progress_reward,
-                    # "longer_reward": longer_reward,
-                    "total": reward,
-                    }
-            })
-        self.first_loop = False
-        return reward      
-    
+       
 
 def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
-    grid = np.zeros(grid_size, dtype=np.float32)
+    candy_grid = np.zeros(grid_size, dtype=np.int8)
+    player_head_grid = np.zeros(grid_size, dtype=np.int8)
+    opponent_head_grid = np.zeros(grid_size, dtype=np.int8)
+    occupied_grid = np.zeros(grid_size, dtype=np.int8)
 
     for candy in candies:
-        grid[candy[0], candy[1]] = 1.0
+        candy_grid[candy[0], candy[1]] = 1
+    candy_grid = candy_grid.flatten()
 
-    if player:
-        for segment in player:
-            grid[segment[0], segment[1]] = 0.3
-        grid[player[0][0], player[0][1]] = 0.4
+    player_head_grid[player[0][0], player[0][1]] = 1
+    player_head_grid = player_head_grid.flatten()
+    opponent_head_grid[opponent[0][0], opponent[0][1]] = 1
+    opponent_head_grid = opponent_head_grid.flatten()
 
-    if opponent:
-        for segment in opponent:
-            grid[segment[0], segment[1]] = 0.6
-        grid[opponent[0][0], opponent[0][1]] = 0.7
+    for segment in player:
+        occupied_grid[segment[0], segment[1]] = 1
+    for segment in opponent:
+        occupied_grid[segment[0], segment[1]] = 1
+    occupied_grid = occupied_grid.flatten()
 
-    flat_grid = grid.flatten()
-
-    return flat_grid, grid
+    observation = np.concatenate((candy_grid, player_head_grid, opponent_head_grid, occupied_grid))
+    return observation
 
 
 class MockAgent(Bot):
@@ -275,3 +226,57 @@ class Printer:
                 print(f' {grid[i, j]}', end='')
             print(' ▏')
         print(f' {"▔" * 2 * game.grid_size[0]}▔ ')
+
+
+    # def get_reward_old(self, player: Snake, opponent: Snake):
+    #     snake_head = np.array([player[0][0], player[0][1]])
+    #     candies = self.game.candies
+
+    #     # finish reward
+    #     if self.game.finished():
+    #         if self.game.scores[0] >= self.game.scores[1]:
+    #             finish_reward = 100
+    #         else:
+    #             finish_reward = -100 #NOTE!!!
+    #     else:
+    #         finish_reward = 0
+
+    #     # candy reward
+    #     if any(np.array_equal(snake_head, candy) for candy in candies):
+    #         candy_reward = 10
+    #     else:
+    #         candy_reward = 0
+        
+    #     # progress reward
+    #     if not self.first_loop:
+    #         closest_candy_dist_prev = self.closest_candy_dist
+     
+    #     candy_dists = [np.linalg.norm(snake_head - candy) for candy in candies]
+    #     self.closest_candy_dist = min(candy_dists)
+
+    #     if not self.first_loop:
+    #         progress_reward = max(0, 5*(closest_candy_dist_prev - self.closest_candy_dist))
+    #     else:
+    #         progress_reward = 0
+
+    #     # longer reward
+    #     # longer_reward = len(player) - len(opponent)
+
+    #     # total reward
+    #     reward = finish_reward + candy_reward + progress_reward
+
+    #     if reward < 0.0001:
+    #         reward -= 1
+
+    #     if self.save_info:
+    #         self.info.update({
+    #             "reward": {
+    #                 "finish": finish_reward,
+    #                 "candy": candy_reward,
+    #                 "progress": progress_reward,
+    #                 # "longer_reward": longer_reward,
+    #                 "total": reward,
+    #                 }
+    #         })
+    #     self.first_loop = False
+    #     return reward      

@@ -18,9 +18,12 @@ class RLQuaza(Bot):
     def __init__(self, id: int, grid_size: Tuple[int, int]):
         self.id = id
         self.grid_size = grid_size
-        zip_name = "11__reward_standstill_and_lose_penalty_9000000_steps"
-        model_name = re.sub(r"_\d+_steps$", "", zip_name)
-        self.model = MaskablePPO.load(f"/home/bramo/coding-challenge-snakes/models/{model_name}/{zip_name}")
+        zip_name = "13__teach_me_sensei__multibin_obs_14610000_steps"
+        self.model = MaskablePPO.load(os.path.join(os.getcwd(), "snakes", "bots", "brammmieee", "models", zip_name))
+
+        # model_name = re.sub(r"_\d+_steps$", "", zip_name)
+        # self.model = MaskablePPO.load(f"/home/bramo/coding-challenge-snakes/models/{model_name}/{zip_name}")
+
 
     @property
     def name(self):
@@ -32,9 +35,9 @@ class RLQuaza(Bot):
 
     def determine_next_move(self, snake: Snake, other_snakes: List[Snake], candies: List[np.array]) -> Move:
         opponent = other_snakes[0]
-        obs, _ = get_obs(self.grid_size, snake, opponent, candies)
+        observation = get_obs(self.grid_size, snake, opponent, candies)
         action, _ = self.model.predict(
-            obs, 
+            observation=observation, 
             deterministic=True, 
             action_masks=self.action_masks(snake, other_snakes)
             )
