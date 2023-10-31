@@ -113,7 +113,7 @@ class SnakeEnv(gym.Env):
         )
 
         # total reward
-        reward = 1 if action_move == sensei_move else -1
+        reward = 10 if action_move == sensei_move else -1
 
         # print("Our move: ", action_move)
         # print("Sensei's move: ", sensei_move)

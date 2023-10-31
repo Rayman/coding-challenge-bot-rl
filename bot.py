@@ -18,7 +18,7 @@ class RLQuaza(Bot):
     def __init__(self, id: int, grid_size: Tuple[int, int]):
         self.id = id
         self.grid_size = grid_size
-        zip_name = "13__teach_me_sensei__multibin_obs_14610000_steps"
+        zip_name = "14__teach_me_sensei__multibin_obs__higher_pos_reward_10480000_steps"
         self.model = MaskablePPO.load(os.path.join(os.getcwd(), "snakes", "bots", "brammmieee", "models", zip_name))
 
         # model_name = re.sub(r"_\d+_steps$", "", zip_name)
