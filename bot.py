@@ -19,8 +19,10 @@ class RLQuaza(Bot):
         # zip_name = "14__teach_me_sensei__multibin_obs__higher_pos_reward_10480000_steps"
         # self.model = MaskablePPO.load(os.path.join(os.getcwd(), "snakes", "bots", "brammmieee", "models", zip_name))
         # self.model = MaskablePPO.load(os.path.join(os.getcwd(), "models", "best_model.zip"))
-        self.model = MaskablePPO.load(os.path.join(os.getcwd(), 'models/11__reward_standstill_and_lose_penalty/11__reward_standstill_and_lose_penalty_350000_steps.zip'))
-
+        self.model = MaskablePPO.load(
+            os.path.join(os.getcwd(), 'models/v1_candy_distance/v1_candy_distance_5530000_steps.zip'))
+        self.model = MaskablePPO.load(
+            os.path.join(os.getcwd(), 'models/v1_small_policy/v1_small_policy_310000_steps.zip'))
 
     @property
     def name(self):

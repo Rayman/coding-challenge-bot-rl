@@ -13,22 +13,27 @@ from ...snake import Snake
 
 
 class SnakeEnv(gym.Env):
-    def __init__(self):
+    metadata = {"render_modes": ["human", "ansi"]}
+
+    def __init__(self, render_mode=None):
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
         bots = (
             Random,
         )
         self.first_loop = True
         self.random_bot = bots[random.randint(0, len(bots) - 1)]
-        # self.printer = Printer()
+        self.printer = Printer()
 
         grid_length = 16
         self.size = (grid_length, grid_length)
         # self.observation_space = gym.spaces.MultiBinary((grid_length ** 2) * 4)
         self.observation_space = gym.spaces.Dict({
-            'candies': gym.spaces.MultiBinary((16, 16)),
-            'player': gym.spaces.MultiBinary((16, 16)),
-            'opponent': gym.spaces.MultiBinary((16, 16)),
-            'occupied': gym.spaces.MultiBinary((16, 16)),
+            # 'candies': gym.spaces.MultiBinary((16, 16)),
+            # 'player': gym.spaces.MultiBinary((16, 16)),
+            # 'opponent': gym.spaces.MultiBinary((16, 16)),
+            # 'occupied': gym.spaces.MultiBinary((16, 16)),
+            'candy_vectors': gym.spaces.Box(-16, 16, (3, 2), dtype=np.int8)
         })
         self.action_space = gym.spaces.Discrete(4)
         self.game = None
@@ -36,6 +41,7 @@ class SnakeEnv(gym.Env):
         self.opponent = None
 
     def reset(self, seed=None):
+        # print('reset after turns', self.game.turns if self.game else None)
         super().reset(seed=seed)
         agents = {
             0: MockAgent,
@@ -76,9 +82,9 @@ class SnakeEnv(gym.Env):
             length_difference = len(self.player) - length_before
             reward += length_difference
 
-            candy_distance_difference = min(
-                [np.linalg.norm(self.player[0] - c, 1) for c in self.game.candies]) - candy_distance_before
-            reward += -candy_distance_difference / 16
+            # candy_distance_difference = min(
+            #     [np.linalg.norm(self.player[0] - c, 1) for c in self.game.candies]) - candy_distance_before
+            # reward += -candy_distance_difference / 16
         if self.opponent not in self.game.snakes:
             self.opponent = None
         observation = self.get_obs(self.player, self.opponent)
@@ -96,8 +102,7 @@ class SnakeEnv(gym.Env):
         return observation
 
     def render(self):
-        if self.render:
-            self.printer.print(self.game)
+        self.printer.print(self.game)
 
 
 def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
@@ -106,6 +111,7 @@ def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
     opponent_head_grid = np.zeros(grid_size, dtype=np.int8)
     occupied_grid = np.zeros(grid_size, dtype=np.int8)
 
+    candy_vectors = np.zeros((3, 2), dtype=np.int8)
     for candy in candies:
         candy_grid[candy[0], candy[1]] = 1
 
@@ -114,16 +120,20 @@ def get_obs(grid_size, player: Snake, opponent: Snake, candies: List[np.array]):
         for segment in player:
             occupied_grid[segment[0], segment[1]] = 1
 
+        for i, candy in enumerate(candies):
+            candy_vectors[i] = player[0] - candy
+
     if opponent:
         opponent_head_grid[opponent[0][0], opponent[0][1]] = 1
         for segment in opponent:
             occupied_grid[segment[0], segment[1]] = 1
 
     observation = {
-        'candies': candy_grid,
-        'player': player_head_grid,
-        'opponent': opponent_head_grid,
-        'occupied': occupied_grid,
+        # 'candies': candy_grid,
+        # 'player': player_head_grid,
+        # 'opponent': opponent_head_grid,
+        # 'occupied': occupied_grid,
+        'candy_vectors': candy_vectors,
     }
     return observation
 

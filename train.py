@@ -2,11 +2,10 @@
 import os
 
 from sb3_contrib import MaskablePPO
+from snakes.bots.brammmieee.env import SnakeEnv
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback, CallbackList
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
-
-from snakes.bots.brammmieee.env import SnakeEnv
 
 env = SnakeEnv()
 check_env(env)
