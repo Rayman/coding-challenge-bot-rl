@@ -1,14 +1,35 @@
 minisnake-v1:
-#  n_timesteps: 40_000
-  n_timesteps: 200_000
+  n_timesteps: 150_000
   policy: 'MultiInputPolicy'
   policy_kwargs: dict(net_arch=dict(pi=[4, 4], vf=[4, 4]))
-#  learning_rate: !!float 1e-04
-#  gae_lambda: !!float 0.9
-#  gamma: !!float 0.9
+  n_envs: 8 # number of environment copies running in parallel
+  n_steps: 128 # batch size is n_steps * n_env
+  #  learning_rate: !!float 1e-04
+  #  gae_lambda: !!float 0.9
+  #  gamma: !!float 0.9
 
 minisnake-v2:
+#  n_timesteps: 150_000
+  n_timesteps: 250_000
+  policy: 'MultiInputPolicy'
+  policy_kwargs: dict(net_arch=dict(pi=[64, 64], vf=[64, 64]))
+  n_envs: 8 # number of environment copies running in parallel
+
+  # tuned hyperparameters
+  batch_size: 128
+  n_steps: 256 # batch size is n_steps * n_env
+  gamma: 0.9
+  learning_rate: 0.003234529363233094
+  ent_coef: 0.08158847777233094
+  clip_range: 0.1
+  n_epochs: 5
+  gae_lambda: 0.95
+  max_grad_norm: 0.7
+  vf_coef: 0.12617888259517707
+#  activation_fn: tanh
+
+minisnake-v3:
   n_timesteps: 1000_000
   policy: snakes.bots.brammmieee.minisnake2.CustomMultiInputPolicy
-#  policy: 'MultiInputPolicy'
+  #  policy: 'MultiInputPolicy'
   policy_kwargs: dict(net_arch=dict(pi=[4], vf=[4]))
